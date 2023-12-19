@@ -16,11 +16,7 @@ contract PuppyRaffleTest is Test {
     uint256 duration = 1 days;
 
     function setUp() public {
-        puppyRaffle = new PuppyRaffle(
-            entranceFee,
-            feeAddress,
-            duration
-        );
+        puppyRaffle = new PuppyRaffle(entranceFee, feeAddress, duration);
     }
 
     //////////////////////
@@ -212,5 +208,41 @@ contract PuppyRaffleTest is Test {
         puppyRaffle.selectWinner();
         puppyRaffle.withdrawFees();
         assertEq(address(feeAddress).balance, expectedPrizeAmount);
+    }
+
+    function test_denialOfService() public {
+        // address[] memory players = new address[](1);
+        // players[0] = playerOne;
+        // puppyRaffle.enterRaffle{value: entranceFee}(players);
+        // assertEq(puppyRaffle.players(0), playerOne);
+
+        vm.txGasPrice(1);
+
+        // enter 100 players
+        uint256 playerNum = 100;
+        address[] memory players = new address[](playerNum);
+        for (uint256 i = 0; i < playerNum; i++) {
+            players[i] = address(i);
+        }
+        // gas that first 100 players const
+        uint256 gasStart = gasleft();
+        puppyRaffle.enterRaffle{value: entranceFee * playerNum}(players);
+        uint256 gasEnd = gasleft();
+        uint256 gasUsedFirst = (gasStart - gasEnd) * tx.gasprice;
+        console.log("Gas cost of the first 100 players: ", gasUsedFirst);
+
+        // gas that the 2nd 100 players cost
+        address[] memory playersTwo = new address[](playerNum);
+        for (uint256 i = 0; i < playerNum; i++) {
+            playersTwo[i] = address(i + playerNum);
+        }
+        // gas that first 100 players const
+        uint256 gasStartSecond = gasleft();
+        puppyRaffle.enterRaffle{value: entranceFee * playerNum}(playersTwo);
+        uint256 gasEndSecond = gasleft();
+        uint256 gasUsedSecond = (gasStartSecond - gasEndSecond) * tx.gasprice;
+        console.log("Gas cost of the second 100 players: ", gasUsedSecond);
+
+        assert(gasUsedSecond > gasUsedFirst);
     }
 }
